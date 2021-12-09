@@ -2,7 +2,6 @@
 
 open System
 open Microsoft.AspNetCore.Mvc
-open FsharpSwaggerControllers
 
 [<ApiController>]
 [<Route("[controller]")>]
