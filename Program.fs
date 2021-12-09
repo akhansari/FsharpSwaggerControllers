@@ -1,48 +1,59 @@
 namespace FsharpSwaggerControllers
 
 open System
-open Microsoft.AspNetCore.Hosting
-open Microsoft.Extensions.Hosting
-open Microsoft.Extensions.DependencyInjection
 open Microsoft.AspNetCore.Builder
-open Microsoft.OpenApi.Models
+open Microsoft.AspNetCore.Mvc
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Hosting
 
-module Program =
-    
-    let private configureServices (_: WebHostBuilderContext) (services: IServiceCollection) =
-        services
-            .AddHealthChecks().Services
-            .AddResponseCompression()
-            .AddRouting()
+type WeatherForecast =
+    { Date: DateTime
+      TemperatureC: int32
+      Summary: string }
+    member this.TemperatureF =
+        32.0 + (float this.TemperatureC / 0.5556)
+
+[<ApiController>]
+[<Route("[controller]")>]
+type WeatherForecastController () =
+    inherit ControllerBase ()
+
+    let summaries =
+        [ "Freezing"
+          "Bracing"
+          "Chilly"
+          "Cool"
+          "Mild"
+          "Warm"
+          "Balmy"
+          "Hot"
+          "Sweltering"
+          "Scorching" ]
+
+    /// Get the weather forecast
+    [<HttpGet>]
+    member _.Get () =
+        let rng = Random()
+        [ for index in 0..4 ->
+            { Date = DateTime.Now.AddDays(float index)
+              TemperatureC = rng.Next(-20,55)
+              Summary = summaries[rng.Next summaries.Length] } ]
+
+module Programe =
+
+    [<EntryPoint>]
+    let main args =
+        let builder = WebApplication.CreateBuilder args
+        builder.Services
             .AddSwaggerGen(fun c ->
-                c.SwaggerDoc("v1", OpenApiInfo(Title = "Fsharp Swagger with Controllers", Version = "v1"))
                 c.IncludeXmlComments(
                     IO.Path.Combine(
                         AppContext.BaseDirectory,
                         Reflection.Assembly.GetEntryAssembly().GetName().Name + ".xml")))
             .AddControllers()
         |> ignore
-
-    let private configureMiddlewares (_: WebHostBuilderContext) (app: IApplicationBuilder) =
-        app
-            .UseResponseCompression()
-            .UseRouting()
-            .UseSwagger()
-            .UseEndpoints(fun endpoints ->
-                endpoints.MapHealthChecks("/health") |> ignore
-                endpoints.MapControllers() |> ignore)
-            .UseSwaggerUI(fun c -> c.SwaggerEndpoint("v1/swagger.json", "V1"))
-        |> ignore
-
-    let CreateHostBuilder args =
-        Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(fun webBuilder ->
-                webBuilder
-                    .ConfigureServices(configureServices)
-                    .Configure(configureMiddlewares)
-                |> ignore)
-
-    [<EntryPoint>]
-    let main args =
-        CreateHostBuilder(args).Build().Run()
+        let app = builder.Build()
+        app.UseSwagger().UseSwaggerUI() |> ignore
+        app.MapControllers() |> ignore
+        app.Run()
         0
